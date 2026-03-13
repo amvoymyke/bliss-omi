@@ -1,0 +1,21 @@
+{
+  "tools": [
+    {
+      "name": "ask_bliss",
+      "description": "Talk to Bliss, your personal AI assistant. Use this for any request - scheduling, tasks, questions, reminders, or just thinking out loud.",
+      "endpoint": "https://hook.us2.make.com/rwnk7gvlxe94plf5fyhe43tmn0gxzl39",
+      "method": "POST",
+      "parameters": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "What you want to say to Bliss"
+          }
+        },
+        "required": ["message"]
+      },
+      "auth_required": false,
+      "status_message": "Asking Bliss..."
+    }
+  ]
+}
