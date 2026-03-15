@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Bliss</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --accent: #7b6ef6;
+    --accent-soft: rgba(123, 110, 246, 0.15);
+    --accent-glow: rgba(123, 110, 246, 0.4);
+    --text: #e8e6f0;
+    --text-dim: #6b6880;
+    --success: #6ef6b8;
+    --error: #f66e7b;
+    --ring-1: rgba(123, 110, 246, 0.6);
+    --ring-2: rgba(123, 110, 246, 0.3);
+    --ring-3: rgba(123, 110, 246, 0.1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    position: relative;
+  }
+
+  /* Ambient background */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .ambient::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(123,110,246,0.08) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: breathe 6s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+    50% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  }
+
+  /* Main container */
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 48px;
+    padding: 40px 24px;
+    width: 100%;
+    max-width: 380px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+  }
+
+  .title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 52px;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #e8e6f0 30%, #7b6ef6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  /* Orb button */
+  .orb-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .orb-rings {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    animation: ring-pulse 3s ease-in-out infinite;
+  }
+
+  .ring-1 {
+    inset: -20px;
+    border-color: var(--ring-1);
+    animation-delay: 0s;
+    opacity: 0;
+  }
+
+  .ring-2 {
+    inset: -40px;
+    border-color: var(--ring-2);
+    animation-delay: 0.5s;
+    opacity: 0;
+  }
+
+  .ring-3 {
+    inset: -60px;
+    border-color: var(--ring-3);
+    animation-delay: 1s;
+    opacity: 0;
+  }
+
+  @keyframes ring-pulse {
+    0%, 100% { transform: scale(0.95); opacity: 0; }
+    50% { transform: scale(1); opacity: 1; }
+  }
+
+  .orb {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%,
+      rgba(180, 170, 255, 0.9) 0%,
+      rgba(123, 110, 246, 0.8) 40%,
+      rgba(60, 50, 140, 0.9) 70%,
+      rgba(20, 18, 50, 1) 100%
+    );
+    box-shadow:
+      0 0 40px rgba(123, 110, 246, 0.4),
+      0 0 80px rgba(123, 110, 246, 0.2),
+      inset 0 0 30px rgba(255,255,255,0.05);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .orb-icon {
+    width: 48px;
+    height: 48px;
+    opacity: 0.9;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.5));
+  }
+
+  .orb-container:active .orb {
+    transform: scale(0.95);
+    box-shadow:
+      0 0 60px rgba(123, 110, 246, 0.6),
+      0 0 100px rgba(123, 110, 246, 0.3),
+      inset 0 0 30px rgba(255,255,255,0.08);
+  }
+
+  /* Active/speaking states */
+  .orb-container.active .ring-1,
+  .orb-container.active .ring-2,
+  .orb-container.active .ring-3 {
+    animation: ring-active 1.5s ease-in-out infinite;
+  }
+
+  .orb-container.active .ring-2 { animation-delay: 0.3s; }
+  .orb-container.active .ring-3 { animation-delay: 0.6s; }
+
+  @keyframes ring-active {
+    0% { transform: scale(0.9); opacity: 0; }
+    50% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1.2); opacity: 0; }
+  }
+
+  .orb-container.speaking .orb {
+    animation: orb-speak 0.8s ease-in-out infinite alternate;
+  }
+
+  @keyframes orb-speak {
+    from { box-shadow: 0 0 40px rgba(123,110,246,0.4), 0 0 80px rgba(123,110,246,0.2); }
+    to { box-shadow: 0 0 70px rgba(123,110,246,0.7), 0 0 120px rgba(123,110,246,0.4); }
+  }
+
+  /* Status */
+  .status {
+    text-align: center;
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-text {
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+  }
+
+  .status-text.active {
+    color: var(--accent);
+  }
+
+  .status-text.error {
+    color: var(--error);
+  }
+
+  .status-text.success {
+    color: var(--success);
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: all 0.3s ease;
+  }
+
+  .status-dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: dot-pulse 1s ease-in-out infinite;
+  }
+
+  .status-dot.speaking {
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+    animation: dot-pulse 0.6s ease-in-out infinite;
+  }
+
+  @keyframes dot-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.7; }
+  }
+
+  /* Loading state */
+  .loading-bar {
+    width: 120px;
+    height: 1px;
+    background: var(--surface);
+    border-radius: 1px;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .loading-bar.visible {
+    opacity: 1;
+  }
+
+  .loading-fill {
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: loading-sweep 1.5s ease-in-out infinite;
+  }
+
+  @keyframes loading-sweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+
+  /* Footer info */
+  .footer {
+    position: fixed;
+    bottom: 24px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    opacity: 0.4;
+  }
+
+  /* Memory loaded indicator */
+  .memory-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border: 1px solid rgba(123,110,246,0.2);
+    border-radius: 20px;
+    opacity: 0;
+    transition: all 0.5s ease;
+  }
+
+  .memory-badge.loaded {
+    opacity: 1;
+    color: var(--accent);
+    border-color: rgba(123,110,246,0.4);
+  }
+
+  .memory-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<div class="container">
+  <div class="header">
+    <div class="title">Bliss</div>
+    <div class="subtitle">Personal Assistant</div>
+  </div>
+
+  <div class="orb-container" id="orbContainer" onclick="toggleConversation()">
+    <div class="orb-rings">
+      <div class="ring ring-3"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-1"></div>
+    </div>
+    <div class="orb" id="orb">
+      <!-- Mic icon -->
+      <svg class="orb-icon" id="orbIcon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="white"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12" y1="19" x2="12" y2="23" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="8" y1="23" x2="16" y2="23" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="status">
+    <div class="status-dot" id="statusDot"></div>
+    <div class="status-text" id="statusText">tap to speak</div>
+    <div class="loading-bar" id="loadingBar"><div class="loading-fill"></div></div>
+    <div class="memory-badge" id="memoryBadge">
+      <div class="memory-dot"></div>
+      memory loaded
+    </div>
+  </div>
+</div>
+
+<div class="footer">Dr. Michael Albin · Bliss 3.0</div>
+
+<script>
+  const AGENT_ID = 'agent_6701kkngterke10twqsqn7p3ttyk';
+  const MAKE_WEBHOOK = 'https://hook.us2.make.com/z1h1854kjti6dan3a3f1qlysevfzcgvt';
+
+  let conversation = null;
+  let isActive = false;
+  let groomedMemory = '';
+  let memoryLoaded = false;
+
+  const orbContainer = document.getElementById('orbContainer');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const loadingBar = document.getElementById('loadingBar');
+  const memoryBadge = document.getElementById('memoryBadge');
+
+  function setStatus(text, state = '') {
+    statusText.className = 'status-text' + (state ? ' ' + state : '');
+    statusText.textContent = text;
+    statusDot.className = 'status-dot' + (state ? ' ' + state : '');
+  }
+
+  function setLoading(show) {
+    loadingBar.className = 'loading-bar' + (show ? ' visible' : '');
+  }
+
+  // Load memory on page load
+  async function loadMemory() {
+    setStatus('loading memory...', '');
+    setLoading(true);
+    try {
+      const response = await fetch(MAKE_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_memory' })
+      });
+      const data = await response.json();
+      if (data && data.dynamic_variables && data.dynamic_variables.groomed_memory) {
+        groomedMemory = data.dynamic_variables.groomed_memory;
+        memoryLoaded = true;
+        memoryBadge.className = 'memory-badge loaded';
+        setStatus('tap to speak', '');
+      } else {
+        groomedMemory = '';
+        setStatus('tap to speak', '');
+      }
+    } catch (e) {
+      groomedMemory = '';
+      setStatus('tap to speak', '');
+    }
+    setLoading(false);
+  }
+
+  async function toggleConversation() {
+    if (isActive) {
+      await endConversation();
+    } else {
+      await startConversation();
+    }
+  }
+
+  async function startConversation() {
+    setStatus('connecting...', 'active');
+    setLoading(true);
+    orbContainer.classList.add('active');
+
+    try {
+      // Dynamically load ElevenLabs SDK
+      if (!window.ElevenLabsConvAI) {
+        await loadScript('https://unpkg.com/@elevenlabs/convai-widget-embed');
+      }
+
+      const { Conversation } = await import('https://unpkg.com/@elevenlabs/react@latest/dist/index.js')
+        .catch(() => null);
+
+      // Use the widget approach instead
+      startWidgetConversation();
+
+    } catch (e) {
+      setStatus('error connecting', 'error');
+      setLoading(false);
+      orbContainer.classList.remove('active');
+    }
+  }
+
+  function startWidgetConversation() {
+    // Build the prompt with memory
+    const systemPromptOverride = groomedMemory
+      ? `You are Bliss, a personal AI assistant to Dr. Michael Albin MD, a surgeon at Hernia Center of Southern California in Pasadena CA. Speak naturally with no markdown, no asterisks, no bullet points. Here is your recent conversation history:\n\n${groomedMemory}\n\nUse this context to maintain continuity. Reference previous topics when relevant.`
+      : null;
+
+    // Use ElevenLabs widget with overrides via URL params
+    const agentUrl = `https://elevenlabs.io/convai/widget/${AGENT_ID}`;
+
+    // Open in a way that passes overrides - use the SDK approach
+    initSDKConversation(systemPromptOverride);
+  }
+
+  async function initSDKConversation(promptOverride) {
+    try {
+      // Load the ElevenLabs client SDK
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.textContent = `
+        import { Conversation } from 'https://cdn.jsdelivr.net/npm/@elevenlabs/client@latest/dist/index.js';
+
+        const overrides = ${promptOverride ? JSON.stringify({
+          agent: { prompt: { prompt: promptOverride } }
+        }) : '{}'};
+
+        window._blissConversation = await Conversation.startSession({
+          agentId: '${AGENT_ID}',
+          overrides: overrides,
+          onConnect: () => window.dispatchEvent(new CustomEvent('bliss:connect')),
+          onDisconnect: () => window.dispatchEvent(new CustomEvent('bliss:disconnect')),
+          onModeChange: (e) => window.dispatchEvent(new CustomEvent('bliss:mode', { detail: e })),
+          onError: (e) => window.dispatchEvent(new CustomEvent('bliss:error', { detail: e }))
+        });
+      `;
+      document.head.appendChild(script);
+
+      window.addEventListener('bliss:connect', onConnect, { once: true });
+      window.addEventListener('bliss:disconnect', onDisconnect, { once: true });
+      window.addEventListener('bliss:mode', onModeChange);
+      window.addEventListener('bliss:error', onError, { once: true });
+
+    } catch(e) {
+      setStatus('failed to start', 'error');
+      setLoading(false);
+      orbContainer.classList.remove('active');
+    }
+  }
+
+  function onConnect() {
+    isActive = true;
+    setLoading(false);
+    setStatus('listening...', 'active');
+    orbContainer.classList.add('active');
+  }
+
+  function onDisconnect() {
+    isActive = false;
+    setStatus('tap to speak', '');
+    orbContainer.classList.remove('active', 'speaking');
+    window.removeEventListener('bliss:mode', onModeChange);
+  }
+
+  function onModeChange(e) {
+    const mode = e.detail?.mode;
+    if (mode === 'speaking') {
+      setStatus('bliss is speaking...', 'active');
+      orbContainer.classList.add('speaking');
+      statusDot.className = 'status-dot speaking';
+    } else {
+      setStatus('listening...', 'active');
+      orbContainer.classList.remove('speaking');
+      statusDot.className = 'status-dot active';
+    }
+  }
+
+  function onError(e) {
+    setStatus('connection error', 'error');
+    setLoading(false);
+    isActive = false;
+    orbContainer.classList.remove('active', 'speaking');
+  }
+
+  async function endConversation() {
+    if (window._blissConversation) {
+      await window._blissConversation.endSession();
+      window._blissConversation = null;
+    }
+    isActive = false;
+    setStatus('tap to speak', '');
+    orbContainer.classList.remove('active', 'speaking');
+  }
+
+  // Init
+  loadMemory();
+</script>
+</body>
+</html>
