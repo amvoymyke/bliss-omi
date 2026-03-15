@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Bliss</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@300;400&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --accent: #7b6ef6;
+    --text: #e8e6f0;
+    --text-dim: #6b6880;
+    --success: #6ef6b8;
+    --error: #f66e7b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+  }
+
+  .ambient {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  }
+  .ambient::before {
+    content: '';
+    position: absolute;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(123,110,246,0.1) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: breathe 6s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.6; }
+    50%       { transform: translate(-50%,-50%) scale(1.2); opacity: 1; }
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 48px;
+    padding: 40px 24px; width: 100%; max-width: 380px;
+  }
+
+  .title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 56px;
+    background: linear-gradient(135deg, #e8e6f0 30%, #7b6ef6 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: center; line-height: 1; margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--text-dim); text-align: center;
+  }
+
+  /* Orb */
+  .orb-wrap {
+    position: relative; width: 180px; height: 180px;
+    cursor: pointer; user-select: none;
+  }
+  .ring {
+    position: absolute; border-radius: 50%;
+    border: 1px solid transparent;
+    animation: ring-idle 3s ease-in-out infinite;
+  }
+  .r1 { inset: -20px; border-color: rgba(123,110,246,0.6); animation-delay: 0s;   opacity: 0; }
+  .r2 { inset: -40px; border-color: rgba(123,110,246,0.3); animation-delay: 0.5s; opacity: 0; }
+  .r3 { inset: -60px; border-color: rgba(123,110,246,0.1); animation-delay: 1s;   opacity: 0; }
+  @keyframes ring-idle {
+    0%,100% { transform: scale(0.95); opacity: 0; }
+    50%      { transform: scale(1);   opacity: 1; }
+  }
+
+  .orb {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%,
+      rgba(200,190,255,0.9) 0%, rgba(123,110,246,0.85) 40%,
+      rgba(55,45,130,0.9) 70%, rgba(18,15,45,1) 100%);
+    box-shadow: 0 0 40px rgba(123,110,246,0.4), 0 0 80px rgba(123,110,246,0.2);
+    transition: all 0.3s ease;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .orb svg { width: 48px; height: 48px; filter: drop-shadow(0 0 8px rgba(255,255,255,0.5)); }
+  .orb-wrap:active .orb { transform: scale(0.94); }
+
+  .orb-wrap.active .r1,
+  .orb-wrap.active .r2,
+  .orb-wrap.active .r3 { animation: ring-on 1.5s ease-in-out infinite; }
+  .orb-wrap.active .r2 { animation-delay: 0.3s; }
+  .orb-wrap.active .r3 { animation-delay: 0.6s; }
+  @keyframes ring-on {
+    0%   { transform: scale(0.9); opacity: 0; }
+    50%  { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1.2); opacity: 0; }
+  }
+
+  .orb-wrap.speaking .orb {
+    animation: orb-speak 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes orb-speak {
+    from { box-shadow: 0 0 40px rgba(123,110,246,0.4), 0 0 80px rgba(123,110,246,0.2); }
+    to   { box-shadow: 0 0 70px rgba(123,110,246,0.8), 0 0 130px rgba(123,110,246,0.4); }
+  }
+
+  /* Status */
+  .status {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px; min-height: 64px;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-dim); transition: all 0.3s;
+  }
+  .dot.active  { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: dp 1s ease-in-out infinite; }
+  .dot.speak   { background: var(--success); box-shadow: 0 0 8px var(--success); animation: dp 0.6s ease-in-out infinite; }
+  .dot.err     { background: var(--error); }
+  @keyframes dp {
+    0%,100% { transform: scale(1); opacity: 1; }
+    50%     { transform: scale(1.6); opacity: 0.6; }
+  }
+  .stext {
+    font-size: 13px; letter-spacing: 1px;
+    color: var(--text-dim); transition: all 0.3s;
+  }
+  .stext.active { color: var(--accent); }
+  .stext.err    { color: var(--error); }
+  .stext.ok     { color: var(--success); }
+
+  .bar {
+    width: 120px; height: 1px; background: #1a1a2e;
+    border-radius: 1px; overflow: hidden;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .bar.on { opacity: 1; }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: sweep 1.5s ease-in-out infinite;
+  }
+  @keyframes sweep {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border: 1px solid rgba(123,110,246,0.15);
+    border-radius: 20px;
+    opacity: 0; transition: all 0.5s;
+  }
+  .badge.on { opacity: 1; color: var(--accent); border-color: rgba(123,110,246,0.4); }
+  .bdot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+
+  .footer {
+    position: fixed; bottom: 24px;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--text-dim); text-transform: uppercase; opacity: 0.35;
+  }
+
+  /* Hide the ElevenLabs default widget chrome */
+  elevenlabs-convai { position: fixed; bottom: -9999px; right: -9999px; }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+
+<div class="container">
+  <div>
+    <div class="title">Bliss</div>
+    <div class="subtitle">Personal Assistant</div>
+  </div>
+
+  <div class="orb-wrap" id="orb" onclick="toggleCall()">
+    <div class="ring r3"></div>
+    <div class="ring r2"></div>
+    <div class="ring r1"></div>
+    <div class="orb">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="white"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12" y1="19" x2="12" y2="23" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="8"  y1="23" x2="16" y2="23" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="status">
+    <div class="dot"   id="dot"></div>
+    <div class="stext" id="stxt">tap to speak</div>
+    <div class="bar"   id="bar"><div class="bar-fill"></div></div>
+    <div class="badge" id="badge"><div class="bdot"></div>memory loaded</div>
+  </div>
+</div>
+
+<div class="footer">Dr. Michael Albin · Bliss 3.0</div>
+
+<!-- Hidden ElevenLabs widget -->
+<elevenlabs-convai agent-id="agent_6701kkngterke10twqsqn7p3ttyk" id="widget"></elevenlabs-convai>
+<script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async></script>
+
+<script>
+  const MAKE_URL = 'https://hook.us2.make.com/z1h1854kjti6dan3a3f1qlysevfzcgvt';
+
+  const orbEl  = document.getElementById('orb');
+  const dotEl  = document.getElementById('dot');
+  const stxtEl = document.getElementById('stxt');
+  const barEl  = document.getElementById('bar');
+  const badge  = document.getElementById('badge');
+  const widget = document.getElementById('widget');
+
+  let active = false;
+  let memory = '';
+
+  const setS = (txt, cls='') => {
+    stxtEl.className = 'stext' + (cls ? ' '+cls : '');
+    stxtEl.textContent = txt;
+    dotEl.className = 'dot' + (cls ? ' '+cls : '');
+  };
+  const setBar = v => barEl.className = 'bar' + (v ? ' on' : '');
+
+  // ── Load memory from Make.com ──
+  async function loadMemory() {
+    setS('loading memory...');
+    setBar(true);
+    try {
+      const r = await fetch(MAKE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_memory' })
+      });
+      const d = await r.json();
+      if (d?.dynamic_variables?.groomed_memory) {
+        memory = d.dynamic_variables.groomed_memory;
+        badge.className = 'badge on';
+      }
+    } catch(e) {
+      console.warn('Memory fetch failed:', e);
+    }
+    setBar(false);
+    setS('tap to speak');
+  }
+
+  // ── Wait for widget to be ready ──
+  function waitForWidget() {
+    return new Promise((resolve) => {
+      if (widget.startConversation) {
+        resolve();} else {
+        const observer = new MutationObserver(() => {
+          if (widget.startConversation) {
+            observer.disconnect();
+            resolve();
+          }
+        });
+        observer.observe(widget, { attributes: true, childList: true, subtree: true });
+        
+        // Fallback timeout
+        setTimeout(resolve, 3000);
+      }
+    });
+  }
+
+  // ── Setup widget with conversation config override ──
+  async function initWidget() {
+    await waitForWidget();
+    
+    // Set conversation config with memory if available
+    if (memory) {
+      widget.setAttribute('conversation-config-override', JSON.stringify({
+        agent: {
+          prompt: {
+            prompt: `You are Bliss, a personal AI assistant to Dr. Michael Albin MD, a surgeon at Hernia Center of Southern California in Pasadena CA (herniaonline.com). Speak naturally — no markdown, no asterisks, no bullet points. Be warm, efficient, and calm. Keep responses short and punchy.\n\nHere is your recent conversation history:\n\n${memory}\n\nUse this context to maintain continuity. Reference previous topics when relevant.`
+          }
+        }
+      }));
+    }}
+
+  // ── Widget lifecycle events ──
+  widget.addEventListener('convai:connect', () => {
+    active = true;
+    setBar(false);
+    setS('listening...', 'active');
+    orbEl.classList.add('active');
+  });
+
+  widget.addEventListener('convai:disconnect', () => {
+    active = false;
+    setS('tap to speak');
+    orbEl.classList.remove('active', 'speaking');
+    dotEl.className = 'dot';
+  });
+
+  widget.addEventListener('convai:mode-change', e => {
+    if (e.detail?.mode === 'speaking') {
+      setS('bliss is speaking...', 'active');
+      orbEl.classList.add('speaking');
+      dotEl.className = 'dot speak';
+    } else if (e.detail?.mode === 'listening') {
+      setS('listening...', 'active');
+      orbEl.classList.remove('speaking');
+      dotEl.className = 'dot active';
+    }
+  });
+
+  // ── Tap handler ──
+  async function toggleCall() {
+    if (!active) {
+      setS('connecting...', 'active');
+      setBar(true);
+      orbEl.classList.add('active');
+      
+      await waitForWidget();
+      
+      try {
+        if (widget.startConversation) {
+          await widget.startConversation();
+        } else {
+          // Fallback: try clicking the widget
+          widget.click();
+        }
+      } catch(e) {
+        console.error('Failed to start conversation:', e);
+        setS('connection failed', 'err');
+        setBar(false);
+        orbEl.classList.remove('active');
+      }
+    } else {
+      // End session
+      try {
+        if (widget.endConversation) {
+          await widget.endConversation();
+        }} catch(e) {
+        console.error('Failed to end conversation:', e);
+      }
+    }
+  }
+
+  // ── Initialize ──
+  loadMemory().then(() => initWidget());
+</script>
+</body>
+</html>
